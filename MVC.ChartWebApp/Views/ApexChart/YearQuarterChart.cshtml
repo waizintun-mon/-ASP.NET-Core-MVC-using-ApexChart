@@ -1,0 +1,123 @@
+﻿@model ApexYearQuarterChartModel
+
+
+@{
+    // Yearly values
+    var years = Model.Data.Select(x => x.Year).ToArray();
+    var yearValues = Model.Data.Select(x => x.Value).ToArray();
+
+    // Quarter values per year
+    var quarters = Model.Data.ToDictionary(
+        y => y.Year,
+        y => y.Quarters
+    );
+
+    var yearsJson = JsonConvert.SerializeObject(years);
+    var yearValuesJson = JsonConvert.SerializeObject(yearValues);
+    var quartersJson = JsonConvert.SerializeObject(quarters);
+}
+
+<div id="chart-year"></div>
+<div id="chart-quarter" style="margin-top:30px;"></div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    <script>
+        const years = @Html.Raw(yearsJson);
+        const yearValues = @Html.Raw(yearValuesJson);
+        const quartersData = @Html.Raw(quartersJson);
+
+        // Yearly chart
+        var optionsYear = {
+            series: [{
+                data: yearValues
+            }],
+            chart: {
+                id: 'barYear',
+                height: 400,
+                width: '100%',
+                type: 'bar',
+                events: {
+                    dataPointSelection: function (e, chart, opts) {
+                        if (opts.selectedDataPoints[0].length > 0) {
+                            var selectedIndex = opts.dataPointIndex;
+                            var selectedYear = years[selectedIndex];
+                            updateQuarterChart(selectedYear);
+                        }
+                    }
+                }
+            },
+            plotOptions: {
+                bar: {
+                    distributed: true,
+                    horizontal: true,
+                    barHeight: '75%',
+                    dataLabels: {
+                        position: 'bottom'
+                    }
+                }
+            },
+            dataLabels: {
+                enabled: true,
+                textAnchor: 'start',
+                formatter: function (val, opt) {
+                    return years[opt.dataPointIndex];
+                }
+            },
+            xaxis: {
+                categories: years
+            },
+            title: {
+                text: 'Yearly Results'
+            },
+            subtitle: {
+                text: '(Click on bar to see details)'
+            }
+        };
+
+        var chartYear = new ApexCharts(document.querySelector("#chart-year"), optionsYear);
+        chartYear.render();
+
+        // Quarterly chart
+        var optionsQuarter = {
+            series: [{
+                data: []
+            }],
+            chart: {
+                id: 'barQuarter',
+                height: 400,
+                width: '100%',
+                type: 'bar',
+                stacked: true
+            },
+            plotOptions: {
+                bar: {
+                    columnWidth: '50%',
+                    horizontal: false
+                }
+            },
+            title: {
+                text: 'Quarterly Results'
+            },
+            xaxis: {
+                categories: []
+            }
+        };
+
+        var chartQuarter = new ApexCharts(document.querySelector("#chart-quarter"), optionsQuarter);
+        chartQuarter.render();
+
+        // Update quarter chart dynamically
+        function updateQuarterChart(year) {
+            var quarterData = quartersData[year];
+            var labels = Object.keys(quarterData);
+            var values = Object.values(quarterData);
+
+            chartQuarter.updateOptions({
+                series: [{ data: values }],
+                xaxis: { categories: labels },
+                title: { text: 'Quarterly Results for ' + year }
+            });
+        }
+    </script>
+}
